@@ -33,7 +33,15 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override fun currentBaseUrl(): String = cached
 
+    override val lastChannelId: Flow<String?> =
+        dataStore.data.map { prefs -> prefs[LAST_CHANNEL_KEY]?.takeIf { it.isNotBlank() } }
+
+    override suspend fun setLastChannelId(channelId: String) {
+        dataStore.edit { it[LAST_CHANNEL_KEY] = channelId }
+    }
+
     private companion object {
         val KEY = stringPreferencesKey("base_url")
+        val LAST_CHANNEL_KEY = stringPreferencesKey("last_channel_id")
     }
 }

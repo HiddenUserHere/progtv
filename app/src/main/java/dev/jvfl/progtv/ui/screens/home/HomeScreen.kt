@@ -56,6 +56,26 @@ fun HomeScreen() {
         state.categories.flatMap { it.channels }.firstOrNull { it.id == currentChannelId }
     }
 
+    // On first load, resume the channel resolved by the ViewModel (last watched, or the
+    // first favorite, or the first channel in "Todos"): start playing it fullscreen and
+    // point the menu selection at its category so reopening the menu lands on it.
+    val startChannelId by viewModel.startChannelId.collectAsStateWithLifecycle()
+    LaunchedEffect(startChannelId) {
+        val id = startChannelId
+        if (id != null && currentChannelId == null) {
+            currentChannelId = id
+            menuFocusChannelId = id
+            val catIdx = state.categories.indexOfFirst { cat -> cat.channels.any { it.id == id } }
+            if (catIdx >= 0) selectedCategory = catIdx
+            menuOpen = false
+        }
+    }
+
+    // Remember the last watched channel across app restarts.
+    LaunchedEffect(currentChannelId) {
+        currentChannelId?.let { viewModel.onChannelWatched(it) }
+    }
+
     // Zap to prev/next channel (used on the fullscreen player and at list boundaries).
     fun zap(dir: Int) {
         moveChannel(state.categories, selectedCategory, currentChannelId, dir)?.let { pos ->

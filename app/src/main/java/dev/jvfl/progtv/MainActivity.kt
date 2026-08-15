@@ -20,4 +20,13 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * Close the app when the user leaves it (HOME / Recents) instead of keeping it in
+     * the background. Reopening then starts fresh (splash) and resumes the last channel.
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        finishAndRemoveTask()
+    }
 }

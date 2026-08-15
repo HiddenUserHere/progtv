@@ -15,11 +15,15 @@ interface FavoritesRepository {
     suspend fun toggle(channelId: String)
 }
 
-/** User settings (currently just the API base URL). */
+/** User settings (API base URL + last watched channel). */
 interface SettingsRepository {
     val baseUrl: Flow<String>
     suspend fun setBaseUrl(url: String)
 
     /** Synchronous snapshot for the OkHttp interceptor (non-suspend). */
     fun currentBaseUrl(): String
+
+    /** Id of the last channel the user watched (null if none yet). */
+    val lastChannelId: Flow<String?>
+    suspend fun setLastChannelId(channelId: String)
 }
