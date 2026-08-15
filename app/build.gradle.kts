@@ -1,3 +1,6 @@
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +8,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+// App version (also used to name the release APK: ProgTV-<version>.apk).
+val appVersionName = "1.0.0"
+val appVersionCode = 1
+
+// Optional signing config from keystore.properties (kept out of git).
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
 }
 
 android {
@@ -15,20 +28,44 @@ android {
         applicationId = "dev.jvfl.progtv"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystorePropsFile.exists()) {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         debug {
-            // Emulator host loopback -> local backend on the dev machine.
-            buildConfigField("String", "DEFAULT_BASE_URL", "\"http://10.0.2.2:3000\"")
+            buildConfigField("String", "DEFAULT_BASE_URL", "\"https://iptv.jvfl.dev\"")
             isMinifyEnabled = false
         }
         release {
             buildConfigField("String", "DEFAULT_BASE_URL", "\"https://iptv.jvfl.dev\"")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Sign with the release key when available, otherwise fall back to debug so
+            // the project still builds after a fresh clone (without the keystore secrets).
+            signingConfig = if (keystorePropsFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
+    }
+
+    // Name the output APKs ProgTV-<version>.apk.
+    applicationVariants.all {
+        outputs.all {
+            (this as BaseVariantOutputImpl).outputFileName = "ProgTV-$appVersionName.apk"
         }
     }
 
