@@ -42,4 +42,6 @@ data class StreamDto(
     val url: String,
     val quality: String? = null,
     val status: String = "ONLINE",
+    val userAgent: String? = null,
+    val referrer: String? = null,
 )

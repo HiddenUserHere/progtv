@@ -11,8 +11,8 @@ plugins {
 }
 
 // App version (also used to name the release APK: ProgTV-<version>.apk).
-val appVersionName = "1.0.0"
-val appVersionCode = 1
+val appVersionName = "1.0.1"
+val appVersionCode = 2
 
 // Optional signing config from keystore.properties (kept out of git).
 val keystorePropsFile = rootProject.file("keystore.properties")

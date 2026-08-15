@@ -25,15 +25,20 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import dev.jvfl.progtv.domain.model.StreamRef
 import dev.jvfl.progtv.ui.components.BufferingIndicator
 import dev.jvfl.progtv.ui.theme.BgBlack
 import dev.jvfl.progtv.ui.theme.TextMuted
 import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicLong
+
+/** Fallback User-Agent when the backend did not report a working one. */
+private const val DEFAULT_UA = "VLC/3.0.20 LibVLC/3.0.20"
 
 /**
  * Fullscreen Media3 player.
@@ -47,10 +52,11 @@ import java.util.concurrent.atomic.AtomicLong
 @OptIn(UnstableApi::class)
 @Composable
 fun PlayerSurface(
-    url: String?,
+    stream: StreamRef?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val url = stream?.url
 
     // Counts network bytes as they are transferred (thread-safe).
     val byteCounter = remember { AtomicLong(0L) }
@@ -69,8 +75,16 @@ fun PlayerSurface(
             override fun onTransferEnd(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
         }
     }
+    // HTTP data source whose User-Agent / Referer we update per stream before each load,
+    // so the player sends the exact UA the backend proved works for that stream.
+    val httpFactory = remember {
+        DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setUserAgent(DEFAULT_UA)
+    }
     val exoPlayer = remember {
-        val dataSourceFactory = DefaultDataSource.Factory(context).setTransferListener(transferListener)
+        val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
+            .setTransferListener(transferListener)
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .build()
@@ -98,13 +112,19 @@ fun PlayerSurface(
     }
 
     // (Re)load whenever the selected stream changes.
-    LaunchedEffect(url) {
+    LaunchedEffect(stream) {
         everReady = false
         bytesPerSec = 0L
         if (url.isNullOrBlank()) {
             exoPlayer.stop()
             exoPlayer.clearMediaItems()
         } else {
+            // Apply the stream-specific UA / Referer to the shared HTTP factory so the
+            // next data sources ExoPlayer creates (manifest + segments) use them.
+            httpFactory.setUserAgent(stream?.userAgent?.takeIf { it.isNotBlank() } ?: DEFAULT_UA)
+            httpFactory.setDefaultRequestProperties(
+                buildMap { stream?.referrer?.takeIf { it.isNotBlank() }?.let { put("Referer", it) } },
+            )
             exoPlayer.setMediaItem(MediaItem.fromUri(url))
             exoPlayer.prepare()
             exoPlayer.play()

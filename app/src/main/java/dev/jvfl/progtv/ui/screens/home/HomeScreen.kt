@@ -105,7 +105,7 @@ fun HomeScreen() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        PlayerSurface(url = currentChannel?.playUrl)
+        PlayerSurface(stream = currentChannel?.playStream)
 
         if (!menuOpen) {
             Box(

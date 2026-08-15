@@ -44,4 +44,6 @@ private fun StreamDto.toDomain() = StreamRef(
     id = id,
     url = url,
     quality = quality,
+    userAgent = userAgent,
+    referrer = referrer,
 )

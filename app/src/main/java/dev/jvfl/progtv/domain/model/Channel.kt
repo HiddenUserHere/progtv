@@ -5,6 +5,10 @@ data class StreamRef(
     val id: String,
     val url: String,
     val quality: String?,
+    /** User-Agent proven to play this stream (sent by the player). */
+    val userAgent: String? = null,
+    /** Referer required to play this stream, when applicable. */
+    val referrer: String? = null,
 )
 
 /** A channel feed grouping one or more streams. */
@@ -38,11 +42,15 @@ data class Channel(
     val program: ChannelProgram?,
     val feeds: List<Feed>,
 ) {
-    /** First available stream URL, preferring the main feed. */
-    val playUrl: String?
+    /** Chosen stream to play, preferring the main feed's first stream. */
+    val playStream: StreamRef?
         get() = (feeds.firstOrNull { it.isMain } ?: feeds.firstOrNull())
-            ?.streams?.firstOrNull()?.url
-            ?: feeds.flatMap { it.streams }.firstOrNull()?.url
+            ?.streams?.firstOrNull()
+            ?: feeds.flatMap { it.streams }.firstOrNull()
+
+    /** URL of the chosen stream. */
+    val playUrl: String?
+        get() = playStream?.url
 
     /** Current program title, or null when no EPG is available. */
     val nowTitle: String? get() = program?.now?.title
